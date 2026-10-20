@@ -54,19 +54,19 @@
       font-size: 14px;
       transition: background 0.2s;
     }
-    .btn-generate {
-      background: #0284c7;
-      color: #fff;
-    }
-    .btn-generate:hover {
-      background: #0369a1;
-    }
     .btn-copy {
       background: #10b981;
       color: #fff;
     }
     .btn-copy:hover {
       background: #059669;
+    }
+    .btn-clear {
+      background: #ef4444;
+      color: #fff;
+    }
+    .btn-clear:hover {
+      background: #dc2626;
     }
     pre {
       background: #090d16;
@@ -83,9 +83,10 @@
     }
     .status {
       font-size: 13px;
-      color: #10b981;
+      color: #38bdf8;
       margin-top: 8px;
       height: 18px;
+      font-weight: 500;
     }
   </style>
 </head>
@@ -94,15 +95,15 @@
 <div class="container">
   <h2>yt-dlp Command Generator</h2>
   <label for="urlInput" style="display:block; margin-bottom: 8px; color: #94a3b8;">Paste YouTube URL:</label>
-  <input type="text" id="urlInput" placeholder="https://youtu.be/... or https://www.youtube.com/watch?v=..." autocomplete="off" />
+  <input type="text" id="urlInput" placeholder="Paste URL here..." autocomplete="off" autofocus />
 
   <div class="btn-row">
-    <button class="btn-generate" onclick="generateCommand()">Format Command</button>
-    <button class="btn-copy" onclick="copyResult()">Copy Command</button>
+    <button class="btn-copy" onclick="copyResult()">Copy Again</button>
+    <button class="btn-clear" onclick="resetForm()">Clear & New Link</button>
   </div>
   <div class="status" id="statusMsg"></div>
 
-  <pre id="outputCode">Paste a URL above and click Format Command...</pre>
+  <pre id="outputCode">Paste a YouTube link above...</pre>
 </div>
 
 <script>
@@ -128,31 +129,49 @@
   -o "%(title)s.%(ext)s" --merge-output-format mp4 "${targetUrl}"`;
   }
 
-  function generateCommand() {
+  async function processInput() {
     const raw = document.getElementById("urlInput").value;
     const cleaned = cleanUrl(raw);
     const output = document.getElementById("outputCode");
-    if (!cleaned) {
-      output.innerText = "Please enter a valid link.";
-      return;
+    const status = document.getElementById("statusMsg");
+
+    if (!cleaned || cleaned.length < 10) return;
+
+    const command = getTemplate(cleaned);
+    output.innerText = command;
+
+    // Automatically copy to clipboard
+    try {
+      await navigator.clipboard.writeText(command);
+      status.style.color = "#10b981";
+      status.innerText = "✓ Generated & Copied to clipboard automatically!";
+    } catch (e) {
+      status.style.color = "#38bdf8";
+      status.innerText = "✓ Generated! Click Copy Again if not auto-copied.";
     }
-    output.innerText = getTemplate(cleaned);
-    document.getElementById("statusMsg").innerText = "";
   }
 
   async function copyResult() {
     const code = document.getElementById("outputCode").innerText;
-    if (!code || code.startsWith("Paste a URL") || code.startsWith("Please enter")) return;
+    if (!code || code.startsWith("Paste a YouTube")) return;
     await navigator.clipboard.writeText(code);
     const status = document.getElementById("statusMsg");
+    status.style.color = "#10b981";
     status.innerText = "✓ Copied to clipboard!";
     setTimeout(() => { status.innerText = ""; }, 2500);
   }
 
-  document.getElementById("urlInput").addEventListener("input", (e) => {
-    if (e.target.value.trim().length > 10) {
-      generateCommand();
-    }
+  function resetForm() {
+    const input = document.getElementById("urlInput");
+    input.value = "";
+    document.getElementById("outputCode").innerText = "Paste a YouTube link above...";
+    document.getElementById("statusMsg").innerText = "";
+    input.focus();
+  }
+
+  // Auto trigger when user pastes or types
+  document.getElementById("urlInput").addEventListener("input", () => {
+    processInput();
   });
 </script>
 
