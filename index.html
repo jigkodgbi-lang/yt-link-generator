@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>yt-dlp Command Generator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      margin: 0;
+    }
+    .container {
+      width: 100%;
+      max-width: 760px;
+      background: #1e293b;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    h2 {
+      margin-top: 0;
+      color: #38bdf8;
+    }
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #38bdf8;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn-generate {
+      background: #0284c7;
+      color: #fff;
+    }
+    .btn-generate:hover {
+      background: #0369a1;
+    }
+    .btn-copy {
+      background: #10b981;
+      color: #fff;
+    }
+    .btn-copy:hover {
+      background: #059669;
+    }
+    pre {
+      background: #090d16;
+      border: 1px solid #334155;
+      padding: 14px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #a5f3fc;
+      margin-top: 16px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .status {
+      font-size: 13px;
+      color: #10b981;
+      margin-top: 8px;
+      height: 18px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>yt-dlp Command Generator</h2>
+  <label for="urlInput" style="display:block; margin-bottom: 8px; color: #94a3b8;">Paste YouTube URL:</label>
+  <input type="text" id="urlInput" placeholder="https://youtu.be/... or https://www.youtube.com/watch?v=..." autocomplete="off" />
+
+  <div class="btn-row">
+    <button class="btn-generate" onclick="generateCommand()">Format Command</button>
+    <button class="btn-copy" onclick="copyResult()">Copy Command</button>
+  </div>
+  <div class="status" id="statusMsg"></div>
+
+  <pre id="outputCode">Paste a URL above and click Format Command...</pre>
+</div>
+
+<script>
+  function cleanUrl(raw) {
+    let url = raw.trim();
+    if (!url) return "";
+    try {
+      const parsed = new URL(url);
+      parsed.searchParams.delete("si");
+      parsed.searchParams.delete("feature");
+      return parsed.toString();
+    } catch {
+      return url.split("?si=")[0];
+    }
+  }
+
+  function getTemplate(targetUrl) {
+    return `PYTHONPATH=/dev/shm/yt-dlp-plugins XDG_CACHE_HOME=/dev/shm/cache ./yt-dlp-nightly \\
+  --extractor-args "youtube:player_client=tv,web_embedded,android" \\
+  --js-runtimes deno:/dev/shm/deno \\
+  --limit-rate 5M \\
+  -f "bv*[height<=1080][vcodec^=avc1]+ba[ext=m4a]/bv*[height<=1080][vcodec^=avc1]+ba/b[height<=1080]" \\
+  -o "%(title)s.%(ext)s" --merge-output-format mp4 "${targetUrl}"`;
+  }
+
+  function generateCommand() {
+    const raw = document.getElementById("urlInput").value;
+    const cleaned = cleanUrl(raw);
+    const output = document.getElementById("outputCode");
+    if (!cleaned) {
+      output.innerText = "Please enter a valid link.";
+      return;
+    }
+    output.innerText = getTemplate(cleaned);
+    document.getElementById("statusMsg").innerText = "";
+  }
+
+  async function copyResult() {
+    const code = document.getElementById("outputCode").innerText;
+    if (!code || code.startsWith("Paste a URL") || code.startsWith("Please enter")) return;
+    await navigator.clipboard.writeText(code);
+    const status = document.getElementById("statusMsg");
+    status.innerText = "✓ Copied to clipboard!";
+    setTimeout(() => { status.innerText = ""; }, 2500);
+  }
+
+  document.getElementById("urlInput").addEventListener("input", (e) => {
+    if (e.target.value.trim().length > 10) {
+      generateCommand();
+    }
+  });
+</script>
+
+</body>
+</html>
